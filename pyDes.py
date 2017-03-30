@@ -83,7 +83,8 @@ Note: This code was not written for high-end systems needing a fast
       implementation, but rather a handy portable solution with small usage.
 
 """
-
+# import pdb
+# 作调试用
 import sys
 
 # _pythonMajorVersion is used to handle Python2 and Python3 differences.
@@ -457,11 +458,13 @@ class des(_baseDes):
 	
 	# Transform the secret key, so that it is ready for data processing
 	# Create the 16 subkeys, K[1] - K[16]
+	# 首先确定所有的16个子密钥，之后才进行加密
 	def __create_sub_keys(self):
 		"""Create the 16 subkeys K[1] to K[16] from the given key"""
 		key = self.__permutate(des.__pc1, self.__String_to_BitList(self.getKey()))
 		i = 0
 		# Split into Left and Right sections
+		# 从这里可以看出，DES算法中密钥中间的8位被舍弃了。只用到了56位
 		self.L = key[:28]
 		self.R = key[28:]
 		while i < 16:
@@ -477,6 +480,7 @@ class des(_baseDes):
 				j += 1
 
 			# Create one of the 16 subkeys through pc2 permutation
+			# 16个子密钥都为48位
 			self.Kn[i] = self.__permutate(des.__pc2, self.L + self.R)
 
 			i += 1
@@ -585,14 +589,17 @@ class des(_baseDes):
 		# Split the data into blocks, crypting each one seperately
 		i = 0
 		dict = {}
+		#pdb.set_trace() 
 		result = []
 		#cached = 0
 		#lines = 0
 		while i < len(data):
 			# Test code for caching encryption results
+			# 这里用dict字典创建了一个缓存区，如果在加密或解密一组8位的数据时发现曾经处理过同样的数据
+			# 则直接使用之前保存的结果
 			#lines += 1
-			#if dict.has_key(data[i:i+8]):
-				#print "Cached result for: %s" % data[i:i+8]
+			#if data[i:i+8] in dict:
+			#	print ("Cached result for: %s" % data[i:i+8])
 			#	cached += 1
 			#	result.append(dict[data[i:i+8]])
 			#	i += 8
@@ -631,7 +638,8 @@ class des(_baseDes):
 			#dict[data[i:i+8]] = d
 			i += 8
 
-		# print "Lines: %d, cached: %d" % (lines, cached)
+		#print ("Lines: %d, cached: %d" % (lines, cached))
+		# pdb.set_trace() 
 
 		# Return the full crypted string
 		if _pythonMajorVersion < 3:
@@ -850,3 +858,10 @@ class triple_des(_baseDes):
 			data = self.__key2.crypt(data, ENCRYPT)
 			data = self.__key1.crypt(data, DECRYPT)
 		return self._unpadData(data, pad, padmode)
+
+data = b"1234567812345678876543218765432112345678"
+k = des(b"DESCRYPT", CBC, b"\0\0\0\0\0\0\0\0", pad=None, padmode=PAD_PKCS5)
+d = k.encrypt(data)
+print ("Encrypted: %r" % d)
+print ("Decrypted: %r" % k.decrypt(d))
+#assert k.decrypt(d, padmode=PAD_PKCS5) == data
